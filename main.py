@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
 
 def initial_state(N, dims):
     return np.random.choice([-1, 1], size=(N,)*dims)
@@ -39,39 +40,46 @@ def ising_model_monte_carlo(N, dims, steps, T):
     magnetizations = []
     for step in range(steps):
         state = monte_carlo_step(state, beta)
-        if step % 100 == 0:
+        if step % (steps // 10) == 0 or step == steps - 1:  # Also save data on the last step
             energy = compute_energy(state)
             magnetization = compute_magnetization(state)
             energies.append(energy)
             magnetizations.append(magnetization)
-        # Print progress every 100 steps as a percentage
-        if step % (steps // 100) == 0:
-            print(f"Progress at T={T:.2f}: {100 * step / steps:.0f}%")
-    return energies, magnetizations
+            print(f"Progress: {step/steps*100:.2f}%")  # Print progress
+    return state, energies, magnetizations
 
 N = 10
-dims = 2
-steps = 100000
-temperatures = np.linspace(2.3, 2.3, 1)
+dims = 3
+steps = 5000
+temperatures = np.linspace(1.5, 2.5, 10)
 average_magnetizations = []
 std_dev_magnetizations = []
-threshold = 0.05
+collected_states = []
+collected_magnetizations = []
 
-
-for i, T in enumerate(temperatures):
-    _, magnetizations = ising_model_monte_carlo(N, dims, steps, T)
+for T_idx, T in enumerate(temperatures):
+    print(f"Simulating temperature {T:.2f}")
+    final_state, energies, magnetizations = ising_model_monte_carlo(N, dims, steps, T)
     average_magnetization = np.mean(magnetizations) / N**dims
     std_dev_magnetization = np.std(magnetizations, ddof=1) / np.sqrt(len(magnetizations)) / N**dims
     average_magnetizations.append(average_magnetization)
     std_dev_magnetizations.append(std_dev_magnetization)
-    print("Average Magnetization: ", average_magnetization)
-    print("Standard Deviation: ", std_dev_magnetization)
-    # Print progress for temperature steps
-    print(f"Temperature progress: {100 * (i + 1) / len(temperatures):.0f}%")
+    collected_states.append(final_state)  # Store the final state
+    collected_magnetizations.extend(magnetizations)
 
+# Plotting the chart
 plt.errorbar(temperatures, average_magnetizations, yerr=std_dev_magnetizations, fmt='-o', label='Magnetization')
 plt.xlabel('Temperature (T)')
 plt.ylabel('Average Magnetization per Spin')
-plt.title('Classical 3D Heisenberg Model - Monte Carlo Simulation using Metropolis Algorithm')
+plt.title('3D Ising Model - Monte Carlo Simulation')
 plt.legend()
 plt.show()
+
+# Exporting data to CSV
+with open('ising_model_data.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['state_' + str(i) for i in range(N**dims)] + ['magnetization'])
+    for state, magnetization in zip(collected_states, collected_magnetizations):
+        writer.writerow(list(state.flatten()) + [magnetization])
+
+print("Data export complete.")
