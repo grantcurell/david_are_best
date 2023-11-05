@@ -60,3 +60,22 @@
 
 - We'll call this configuration zero. We can measure the energy on this configuration and I measure it according to the above rule. I multiply all nearest neighbors (and then do some other math). The result of that will be the first element ofthe energy array.
 - 
+## Outputs
+
+Using the state, is it ordered or disordered. It will look at the magnetization.
+
+- Temperature
+- State (collection of all the up downs 10x10)
+- Magnitization
+  - If magnetization is above a certain threshold we say it is ordered otherwise not
+
+If below threshold disordered, if higher than threshold ordered
+
+## 18 Numbers
+
+Things we use to determine
+
+- Kairal Condenscate
+- Different masses
+- Abstract quantities
+- We have regions that are unambiguously confined
