@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 def initial_state(N, dims):
     return np.random.choice([-1, 1], size=(N,)*dims)
@@ -40,46 +41,71 @@ def ising_model_monte_carlo(N, dims, steps, T):
     magnetizations = []
     for step in range(steps):
         state = monte_carlo_step(state, beta)
-        if step % (steps // 10) == 0 or step == steps - 1:  # Also save data on the last step
-            energy = compute_energy(state)
-            magnetization = compute_magnetization(state)
-            energies.append(energy)
-            magnetizations.append(magnetization)
-            print(f"Progress: {step/steps*100:.2f}%")  # Print progress
+        energy = compute_energy(state)
+        magnetization = compute_magnetization(state)
+        energies.append(energy)
+        magnetizations.append(magnetization)
+        # Print progress
+        print(f"Temperature {T:.2f}: {100.0 * (step + 1) / steps:.2f}% complete.")
     return state, energies, magnetizations
 
-N = 10
-dims = 3
-steps = 5000
-temperatures = np.linspace(1.5, 2.5, 10)
-average_magnetizations = []
-std_dev_magnetizations = []
-collected_states = []
-collected_magnetizations = []
 
-for T_idx, T in enumerate(temperatures):
-    print(f"Simulating temperature {T:.2f}")
+def simulation_wrapper(args):
+    N, dims, steps, T = args
     final_state, energies, magnetizations = ising_model_monte_carlo(N, dims, steps, T)
-    average_magnetization = np.mean(magnetizations) / N**dims
-    std_dev_magnetization = np.std(magnetizations, ddof=1) / np.sqrt(len(magnetizations)) / N**dims
-    average_magnetizations.append(average_magnetization)
-    std_dev_magnetizations.append(std_dev_magnetization)
-    collected_states.append(final_state)  # Store the final state
-    collected_magnetizations.extend(magnetizations)
 
-# Plotting the chart
-plt.errorbar(temperatures, average_magnetizations, yerr=std_dev_magnetizations, fmt='-o', label='Magnetization')
-plt.xlabel('Temperature (T)')
-plt.ylabel('Average Magnetization per Spin')
-plt.title('3D Ising Model - Monte Carlo Simulation')
-plt.legend()
+    # Export data to CSV for each temperature
+    filename = f'ising_model_T_{T:.2f}.csv'
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['state_' + str(i) for i in range(N ** dims)] + ['magnetization'])
+        for magnetization in magnetizations:
+            writer.writerow(list(final_state.flatten()) + [magnetization])
+
+    # Return summary statistics for plotting
+    average_magnetization = np.mean(magnetizations) / N ** dims
+    std_dev_magnetization = np.std(magnetizations, ddof=1) / np.sqrt(len(magnetizations)) / N ** dims
+
+    return T, average_magnetization, std_dev_magnetization
+
+N = 60
+dims = 2
+steps = 200000
+temperatures = np.linspace(1, 3, 10)
+
+# Setting up the multiprocessing pool
+with ProcessPoolExecutor() as executor:
+    futures = [executor.submit(simulation_wrapper, (N, dims, steps, T)) for T in temperatures]
+
+    results = []
+    for future in as_completed(futures):
+        results.append(future.result())
+
+# Sorting results by temperature for plotting
+results.sort()
+
+# Unpacking results
+sorted_temperatures, average_magnetizations, std_dev_magnetizations = zip(*results)
+abs_average_magnetizations = np.abs(average_magnetizations)
+
+# Creating a subplot with 2 rows and 1 column
+fig, axs = plt.subplots(2, 1, figsize=(8, 10))
+
+# First subplot for Average Magnetization
+axs[0].errorbar(sorted_temperatures, average_magnetizations, yerr=std_dev_magnetizations, fmt='-o', label='Magnetization')
+axs[0].set_xlabel('Temperature (T)')
+axs[0].set_ylabel('Average Magnetization per Spin')
+axs[0].set_title('2D Ising Model - Monte Carlo Simulation')
+axs[0].legend()
+
+# Second subplot for Absolute Average Magnetization
+axs[1].plot(sorted_temperatures, abs_average_magnetizations, '-o', label='|Magnetization|')
+axs[1].set_xlabel('Temperature (T)')
+axs[1].set_ylabel('Absolute Average Magnetization per Spin')
+axs[1].legend()
+
+# Adjusting the layout to prevent overlapping
+plt.tight_layout()
+
+# Display the plot
 plt.show()
-
-# Exporting data to CSV
-with open('ising_model_data.csv', 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(['state_' + str(i) for i in range(N**dims)] + ['magnetization'])
-    for state, magnetization in zip(collected_states, collected_magnetizations):
-        writer.writerow(list(state.flatten()) + [magnetization])
-
-print("Data export complete.")
