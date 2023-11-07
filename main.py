@@ -54,32 +54,39 @@ def simulation_wrapper(args):
     N, dims, steps, T = args
     final_state, energies, magnetizations = ising_model_monte_carlo(N, dims, steps, T)
 
-    # Export data to CSV for each temperature
-    filename = f'ising_model_T_{T:.2f}.csv'
-    with open(filename, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['state_' + str(i) for i in range(N ** dims)] + ['magnetization'])
-        for magnetization in magnetizations:
-            writer.writerow(list(final_state.flatten()) + [magnetization])
+    # Collect data for CSV
+    data_for_csv = [list(final_state.flatten()) + [magnetization, T] for magnetization in magnetizations]
 
-    # Return summary statistics for plotting
+    # Return data for CSV and summary statistics for plotting
     average_magnetization = np.mean(magnetizations) / N ** dims
     std_dev_magnetization = np.std(magnetizations, ddof=1) / np.sqrt(len(magnetizations)) / N ** dims
 
-    return T, average_magnetization, std_dev_magnetization
+    return data_for_csv, T, average_magnetization, std_dev_magnetization
 
-N = 60
+
+N = 20
 dims = 2
-steps = 200000
+steps = 1000
 temperatures = np.linspace(1, 3, 10)
 
+all_data = []
 # Setting up the multiprocessing pool
 with ProcessPoolExecutor() as executor:
     futures = [executor.submit(simulation_wrapper, (N, dims, steps, T)) for T in temperatures]
 
     results = []
     for future in as_completed(futures):
-        results.append(future.result())
+        data_for_csv, T, average_magnetization, std_dev_magnetization = future.result()
+        all_data.extend(data_for_csv)
+        results.append((T, average_magnetization, std_dev_magnetization))
+
+# Writing all data to a single CSV file
+with open('ising_model_data.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    # Add a temperature column header
+    writer.writerow(['state_' + str(i) for i in range(N ** dims)] + ['magnetization', 'temperature'])
+    for row in all_data:
+        writer.writerow(row)
 
 # Sorting results by temperature for plotting
 results.sort()
