@@ -67,7 +67,7 @@ def simulation_wrapper(args):
 N = 20
 dims = 2
 steps = 1000
-temperatures = np.linspace(1, 3, 10)
+temperatures = np.linspace(1, 5, 20)
 
 all_data = []
 # Setting up the multiprocessing pool
@@ -81,7 +81,7 @@ with ProcessPoolExecutor() as executor:
         results.append((T, average_magnetization, std_dev_magnetization))
 
 # Writing all data to a single CSV file
-with open('ising_model_data.csv', 'w', newline='') as file:
+with open('d2 data/ising_model_data.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     # Add a temperature column header
     writer.writerow(['state_' + str(i) for i in range(N ** dims)] + ['magnetization', 'temperature'])

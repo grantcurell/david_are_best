@@ -79,3 +79,18 @@ Things we use to determine
 - Different masses
 - Abstract quantities
 - We have regions that are unambiguously confined
+
+## David Code Notes
+
+![](images/2023-11-09-15-46-12.png)
+
+![](images/2023-11-09-15-53-17.png)
+
+- He is plotting the magnetization against multiple different volumes. The higher N is the sharper the drop. 
+- It's close the transition that things get noisy so you get mixed phase magnetizations
+- The grad student only did only did a binary classification
+
+![](images/2023-11-09-16-18-42.png)
+
+- Took him a year
+- For high orders we use renormalization techniques
